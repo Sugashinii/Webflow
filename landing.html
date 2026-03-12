@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Noctis — AI Analytics Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080808;
+    --surface: #0f0f0f;
+    --border: rgba(255,255,255,0.07);
+    --text: #e8e8e0;
+    --muted: #5a5a52;
+    --accent: #c8f542;
+    --accent2: #f5d442;
+    --mono: 'DM Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--display);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s ease, width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: difference;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(200,245,66,0.4);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.18s ease, width 0.3s, height 0.3s, opacity 0.3s;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 0 5vw;
+    height: 72px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,8,8,0.85);
+    backdrop-filter: blur(20px);
+    animation: fadeDown 0.8s ease both;
+  }
+  @keyframes fadeDown { from { opacity:0; transform: translateY(-20px); } to { opacity:1; transform: none; } }
+
+  .nav-logo {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+
+  .nav-links {
+    display: flex; gap: 2.5rem; list-style: none;
+    font-size: 0.8rem; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .nav-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    background: var(--accent);
+    color: #080808;
+    border: none; cursor: none;
+    padding: 10px 22px;
+    font-family: var(--display);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 30px rgba(200,245,66,0.3); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    padding: 0 5vw;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-grid-bg {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 100%);
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(200,245,66,0.06) 0%, transparent 70%);
+    top: -200px; right: -100px;
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 2.5rem;
+    width: fit-content;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+  .badge-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+
+  .hero-title {
+    font-size: clamp(3.5rem, 9vw, 8.5rem);
+    font-weight: 800;
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    margin-bottom: 2.5rem;
+    animation: fadeUp 0.8s 0.35s ease both;
+  }
+  .hero-title em {
+    font-style: normal;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.25);
+  }
+  .hero-title .accent-word { color: var(--accent); }
+
+  .hero-sub {
+    max-width: 480px;
+    font-size: 1rem;
+    color: var(--muted);
+    line-height: 1.7;
+    font-weight: 400;
+    margin-bottom: 3rem;
+    animation: fadeUp 0.8s 0.5s ease both;
+  }
+
+  .hero-actions {
+    display: flex; gap: 1rem; align-items: center;
+    animation: fadeUp 0.8s 0.65s ease both;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #080808;
+    border: none; cursor: none;
+    padding: 15px 34px;
+    font-family: var(--display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    transition: transform 0.2s, box-shadow 0.25s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(200,245,66,0.35); }
+
+  .btn-ghost {
+    background: none;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    cursor: none;
+    padding: 14px 28px;
+    font-family: var(--display);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+  .hero-stat-strip {
+    position: absolute;
+    bottom: 60px; left: 5vw; right: 5vw;
+    display: flex; gap: 3rem;
+    border-top: 1px solid var(--border);
+    padding-top: 2rem;
+    animation: fadeUp 0.8s 0.8s ease both;
+  }
+  .stat { display: flex; flex-direction: column; gap: 4px; }
+  .stat-num {
+    font-size: 1.8rem; font-weight: 800;
+    letter-spacing: -0.04em;
+    color: var(--text);
+  }
+  .stat-num span { color: var(--accent); }
+  .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+
+  @keyframes fadeUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: none; } }
+
+  /* MARQUEE */
+  .marquee-section {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .marquee-track {
+    display: flex; gap: 4rem;
+    animation: marquee 18s linear infinite;
+    width: max-content;
+  }
+  .marquee-track:hover { animation-play-state: paused; }
+  @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .marquee-item {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 2rem;
+  }
+  .marquee-sep { color: var(--accent); }
+
+  /* FEATURES */
+  .features {
+    padding: 8rem 5vw;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::before { content: ''; width: 32px; height: 1px; background: var(--accent); }
+
+  .section-title {
+    font-size: clamp(2.2rem, 4vw, 3.8rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 4rem;
+    max-width: 600px;
+  }
+  .section-title em { font-style: normal; color: var(--muted); }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .feature-card {
+    background: var(--bg);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(200,245,66,0.04), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feature-card:hover { background: #0d0d0d; }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-icon {
+    width: 44px; height: 44px;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1.8rem;
+    font-size: 1.1rem;
+    color: var(--accent);
+    position: relative;
+    transition: border-color 0.3s;
+  }
+  .feature-card:hover .feature-icon { border-color: rgba(200,245,66,0.4); }
+
+  .feature-num {
+    position: absolute; top: 2.5rem; right: 2.5rem;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--border);
+    letter-spacing: 0.1em;
+    transition: color 0.3s;
+  }
+  .feature-card:hover .feature-num { color: var(--muted); }
+
+  .feature-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+  }
+  .feature-desc {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  /* DASHBOARD PREVIEW */
+  .preview-section {
+    padding: 0 5vw 8rem;
+  }
+  .preview-wrap {
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .preview-bar {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+  }
+  .preview-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .preview-url {
+    flex: 1;
+    margin-left: 1rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    padding: 5px 14px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    max-width: 260px;
+    letter-spacing: 0.04em;
+  }
+
+  .dashboard-mock {
+    background: #0a0a0a;
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: 460px;
+    gap: 0;
+  }
+  .dash-sidebar {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .dash-nav-item {
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    cursor: none;
+    border-radius: 2px;
+    display: flex; align-items: center; gap: 10px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .dash-nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .dash-nav-item.active { background: rgba(200,245,66,0.08); color: var(--accent); }
+  .dash-icon { font-size: 0.9rem; }
+
+  .dash-main { padding: 1.5rem 2rem; }
+  .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .dash-title { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; }
+  .dash-date { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .kpi {
+    border: 1px solid var(--border);
+    padding: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+  .kpi:hover::after { transform: scaleX(1); }
+  .kpi-label { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  .kpi-value { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.04em; }
+  .kpi-delta { font-family: var(--mono); font-size: 0.65rem; color: var(--accent); margin-top: 3px; }
+
+  .chart-area {
+    border: 1px solid var(--border);
+    padding: 1.2rem;
+    position: relative; overflow: hidden;
+  }
+  .chart-label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-bottom: 1rem; letter-spacing: 0.08em; }
+  .chart-bars {
+    display: flex; align-items: flex-end; gap: 6px;
+    height: 100px;
+  }
+  .bar {
+    flex: 1;
+    background: rgba(200,245,66,0.12);
+    border-top: 1px solid rgba(200,245,66,0.3);
+    transition: background 0.2s, height 0.6s ease;
+    animation: barGrow 1.2s ease both;
+    position: relative;
+  }
+  .bar:hover { background: rgba(200,245,66,0.25); }
+  .bar.highlight { background: rgba(200,245,66,0.3); border-color: var(--accent); }
+  @keyframes barGrow { from { height: 0 !important; } }
+
+  /* PRICING */
+  .pricing {
+    padding: 8rem 5vw;
+    border-top: 1px solid var(--border);
+  }
+  .pricing-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border);
+    margin-top: 4rem;
+  }
+  .price-card {
+    background: var(--bg);
+    padding: 2.8rem;
+    position: relative; transition: background 0.3s;
+  }
+  .price-card.featured { background: var(--surface); }
+  .price-badge {
+    font-family: var(--mono); font-size: 0.65rem;
+    background: var(--accent); color: #080808;
+    padding: 3px 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 600;
+    width: fit-content; margin-bottom: 1.5rem;
+  }
+  .price-tier { font-size: 0.72rem; color: var(--muted); font-family: var(--mono); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; }
+  .price-amount {
+    font-size: 3.2rem; font-weight: 800;
+    letter-spacing: -0.06em; line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+  .price-amount sup { font-size: 1.4rem; vertical-align: super; }
+  .price-period { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin-bottom: 2rem; }
+  .price-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 2.5rem; }
+  .price-features li { font-size: 0.82rem; color: var(--muted); display: flex; gap: 10px; align-items: flex-start; }
+  .price-features li::before { content: '—'; color: var(--accent); font-family: var(--mono); flex-shrink: 0; }
+  .price-features li.active { color: var(--text); }
+
+  /* CTA SECTION */
+  .cta-section {
+    padding: 8rem 5vw;
+    text-align: center;
+    position: relative; overflow: hidden;
+    border-top: 1px solid var(--border);
+  }
+  .cta-glow {
+    position: absolute; width: 600px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(200,245,66,0.07) 0%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    pointer-events: none;
+  }
+  .cta-title {
+    font-size: clamp(2.5rem, 5vw, 5rem);
+    font-weight: 800; letter-spacing: -0.04em; line-height: 1;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .cta-sub { color: var(--muted); font-size: 0.95rem; max-width: 400px; margin: 0 auto 3rem; line-height: 1.7; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 5vw;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-logo { font-size: 0.9rem; font-weight: 800; letter-spacing: -0.02em; }
+  .footer-copy { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.08em; }
+  .footer-links { display: flex; gap: 2rem; }
+  .footer-links a { font-size: 0.72rem; color: var(--muted); text-decoration: none; letter-spacing: 0.06em; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--text); }
+
+  /* scroll reveal */
+  .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  @media (max-width: 900px) {
+    .features-grid, .pricing-grid { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: repeat(2,1fr); }
+    .dashboard-mock { grid-template-columns: 1fr; }
+    .dash-sidebar { display: none; }
+    .hero-stat-strip { flex-wrap: wrap; gap: 1.5rem; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo"><div class="logo-dot"></div> Noctis</div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#preview">Platform</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#">Docs</a></li>
+  </ul>
+  <button class="nav-cta">Get Started</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-glow"></div>
+
+  <div class="hero-badge"><div class="badge-dot"></div> Now in Public Beta — v0.9.4</div>
+
+  <h1 class="hero-title">
+    Data that<br>
+    <em>moves</em> at<br>
+    <span class="accent-word">machine</span><br>
+    <em>speed.</em>
+  </h1>
+
+  <p class="hero-sub">Noctis turns raw telemetry into decisions. Real-time analytics for teams that can't afford to be a day behind.</p>
+
+  <div class="hero-actions">
+    <button class="btn-primary">Start Free Trial</button>
+    <button class="btn-ghost">Watch Demo →</button>
+  </div>
+
+  <div class="hero-stat-strip">
+    <div class="stat"><div class="stat-num">12<span>ms</span></div><div class="stat-label">Avg. Query Time</div></div>
+    <div class="stat"><div class="stat-num">99<span>.98%</span></div><div class="stat-label">Uptime SLA</div></div>
+    <div class="stat"><div class="stat-num">4<span>B+</span></div><div class="stat-label">Events / Month</div></div>
+    <div class="stat"><div class="stat-num">800<span>+</span></div><div class="stat-label">Teams Onboard</div></div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <div class="marquee-item">Real-Time Pipelines <span class="marquee-sep">✦</span> Event Tracking <span class="marquee-sep">✦</span> Custom Dashboards <span class="marquee-sep">✦</span> Anomaly Detection <span class="marquee-sep">✦</span> SQL Queries <span class="marquee-sep">✦</span> Team Alerts <span class="marquee-sep">✦</span> Data Warehouse Sync <span class="marquee-sep">✦</span></div>
+    <div class="marquee-item">Real-Time Pipelines <span class="marquee-sep">✦</span> Event Tracking <span class="marquee-sep">✦</span> Custom Dashboards <span class="marquee-sep">✦</span> Anomaly Detection <span class="marquee-sep">✦</span> SQL Queries <span class="marquee-sep">✦</span> Team Alerts <span class="marquee-sep">✦</span> Data Warehouse Sync <span class="marquee-sep">✦</span></div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-label">Capabilities</div>
+  <h2 class="section-title reveal">Everything your data team <em>actually needs.</em></h2>
+
+  <div class="features-grid reveal">
+    <div class="feature-card">
+      <div class="feature-icon">◈</div>
+      <div class="feature-num">01</div>
+      <div class="feature-title">Stream Processing</div>
+      <div class="feature-desc">Ingest millions of events per second with sub-15ms latency. Kafka-compatible, no infra overhead.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⬡</div>
+      <div class="feature-num">02</div>
+      <div class="feature-title">Anomaly Engine</div>
+      <div class="feature-desc">ML-powered detection that learns your baselines. Alerts before your users notice something's wrong.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◻</div>
+      <div class="feature-num">03</div>
+      <div class="feature-title">Visual Dashboards</div>
+      <div class="feature-desc">Drag-and-drop canvas. Pixel-perfect charts. Share live links — no screenshots, no exports.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⊕</div>
+      <div class="feature-num">04</div>
+      <div class="feature-title">SQL Workbench</div>
+      <div class="feature-desc">Query your event store in real-time. Autocomplete, version history, and team-shared saved queries.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◯</div>
+      <div class="feature-num">05</div>
+      <div class="feature-title">Warehouse Sync</div>
+      <div class="feature-desc">Bi-directional sync with Snowflake, BigQuery, and Redshift. One config, always fresh.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">△</div>
+      <div class="feature-num">06</div>
+      <div class="feature-title">Role-Based Access</div>
+      <div class="feature-desc">Granular permissions down to individual columns. SSO, audit logs, and SOC 2 compliant out of the box.</div>
+    </div>
+  </div>
+</section>
+
+<!-- PREVIEW -->
+<section class="preview-section" id="preview">
+  <div class="section-label reveal">Platform</div>
+  <h2 class="section-title reveal">The dashboard that <em>disappears.</em></h2>
+
+  <div class="preview-wrap reveal">
+    <div class="preview-bar">
+      <div class="preview-dot" style="background:#ff5f57"></div>
+      <div class="preview-dot" style="background:#febc2e"></div>
+      <div class="preview-dot" style="background:#28c840"></div>
+      <div class="preview-url">app.noctis.io/overview</div>
+    </div>
+    <div class="dashboard-mock">
+      <div class="dash-sidebar">
+        <div class="dash-nav-item active"><span class="dash-icon">◈</span> Overview</div>
+        <div class="dash-nav-item"><span class="dash-icon">⬡</span> Events</div>
+        <div class="dash-nav-item"><span class="dash-icon">◻</span> Dashboards</div>
+        <div class="dash-nav-item"><span class="dash-icon">◯</span> Alerts</div>
+        <div class="dash-nav-item"><span class="dash-icon">△</span> SQL</div>
+        <div class="dash-nav-item"><span class="dash-icon">⊕</span> Integrations</div>
+      </div>
+      <div class="dash-main">
+        <div class="dash-header">
+          <div class="dash-title">Overview</div>
+          <div class="dash-date">Last 7 days · Updated now</div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="kpi-label">Total Events</div><div class="kpi-value">2.4B</div><div class="kpi-delta">↑ 18.2%</div></div>
+          <div class="kpi"><div class="kpi-label">Avg Latency</div><div class="kpi-value">11ms</div><div class="kpi-delta">↓ 4.1%</div></div>
+          <div class="kpi"><div class="kpi-label">Error Rate</div><div class="kpi-value">0.02%</div><div class="kpi-delta">↓ 0.01%</div></div>
+          <div class="kpi"><div class="kpi-label">Active Sources</div><div class="kpi-value">142</div><div class="kpi-delta">↑ 3</div></div>
+        </div>
+        <div class="chart-area">
+          <div class="chart-label">EVENT VOLUME — 7D</div>
+          <div class="chart-bars" id="chartBars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="section-label reveal">Pricing</div>
+  <h2 class="section-title reveal">Simple, honest <em>pricing.</em></h2>
+  <div class="pricing-grid reveal">
+    <div class="price-card">
+      <div class="price-tier">Starter</div>
+      <div class="price-amount"><sup>$</sup>0</div>
+      <div class="price-period">/ month · up to 5M events</div>
+      <ul class="price-features">
+        <li class="active">5M events / month</li>
+        <li class="active">3 dashboards</li>
+        <li class="active">7-day data retention</li>
+        <li>Anomaly detection</li>
+        <li>Warehouse sync</li>
+      </ul>
+      <button class="btn-ghost" style="width:100%">Start Free</button>
+    </div>
+    <div class="price-card featured">
+      <div class="price-badge">Most Popular</div>
+      <div class="price-tier">Pro</div>
+      <div class="price-amount"><sup>$</sup>79</div>
+      <div class="price-period">/ month · up to 500M events</div>
+      <ul class="price-features">
+        <li class="active">500M events / month</li>
+        <li class="active">Unlimited dashboards</li>
+        <li class="active">90-day retention</li>
+        <li class="active">Anomaly detection</li>
+        <li class="active">Warehouse sync</li>
+      </ul>
+      <button class="btn-primary" style="width:100%">Get Pro</button>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">Enterprise</div>
+      <div class="price-amount">Custom</div>
+      <div class="price-period">/ month · unlimited events</div>
+      <ul class="price-features">
+        <li class="active">Unlimited events</li>
+        <li class="active">Custom retention</li>
+        <li class="active">Dedicated infra</li>
+        <li class="active">SOC 2 + SSO</li>
+        <li class="active">SLA guarantee</li>
+      </ul>
+      <button class="btn-ghost" style="width:100%">Contact Sales</button>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div class="cta-title reveal">Your data is<br><span style="color:var(--accent)">waiting.</span></div>
+  <p class="cta-sub reveal">Set up in 5 minutes. No credit card. No devops heroics.</p>
+  <div class="reveal">
+    <button class="btn-primary" style="font-size:0.95rem;padding:18px 44px">Start Free Trial</button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Noctis</div>
+  <div class="footer-links">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">Status</a>
+    <a href="#">GitHub</a>
+  </div>
+  <div class="footer-copy">© 2026 Noctis Inc.</div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx=0, my=0, rx=0, ry=0;
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; cursor.style.left=mx+'px'; cursor.style.top=my+'px'; });
+  function animRing() { rx+=(mx-rx)*0.1; ry+=(my-ry)*0.1; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(animRing); }
+  animRing();
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.12 });
+  reveals.forEach(el => obs.observe(el));
+
+  // Chart bars
+  const heights = [38, 52, 44, 68, 55, 80, 72];
+  const cb = document.getElementById('chartBars');
+  heights.forEach((h, i) => {
+    const b = document.createElement('div');
+    b.className = 'bar' + (i===6?' highlight':'');
+    b.style.height = h + 'px';
+    b.style.animationDelay = (i*0.07) + 's';
+    cb.appendChild(b);
+  });
+</script>
+</body>
+</html>
